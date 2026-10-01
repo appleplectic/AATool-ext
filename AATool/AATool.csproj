@@ -193,6 +193,7 @@
     <Compile Include="Graphics\Glow.cs" />
     <Compile Include="Input.cs" />
     <Compile Include="Net\AAKey.cs" />
+    <Compile Include="Net\TwitchPublisher.cs" />
     <Compile Include="Net\Lobby.cs" />
     <Compile Include="Net\PeerStatic.cs" />
     <Compile Include="Net\Requests\SrcLeaderboardRequest.cs" />

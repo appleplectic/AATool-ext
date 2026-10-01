@@ -15,6 +15,10 @@ namespace AATool.Winforms.Forms
         public FSettings()
         {
             this.InitializeComponent();
+            //TabPages.Insert is ignored before the control's handle exists, so append and keep Debug last
+            this.tabs.TabPages.Remove(this.tabDebug);
+            this.tabs.TabPages.Add(TwitchPublisher.CreateSettingsTab());
+            this.tabs.TabPages.Add(this.tabDebug);
             if (!this.DesignMode)
                 this.LoadSettings();
         }

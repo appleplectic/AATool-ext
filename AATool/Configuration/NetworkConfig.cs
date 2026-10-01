@@ -20,6 +20,9 @@ namespace AATool.Configuration
             [JsonProperty] public readonly Setting<bool> AutoServerIP = new (true);
             [JsonProperty] public readonly Setting<bool> IsServer = new (false);
 
+            [JsonProperty] public readonly Setting<string> TwitchServer = new (string.Empty);
+            [JsonProperty] public readonly Setting<string> TwitchKey = new (string.Empty);
+
             protected override string GetId() => "network";
             protected override string GetLegacyId() => "network";
 
@@ -33,6 +36,8 @@ namespace AATool.Configuration
                 this.RegisterSetting(this.Port);
                 this.RegisterSetting(this.AutoServerIP);
                 this.RegisterSetting(this.IsServer);
+                this.RegisterSetting(this.TwitchServer);
+                this.RegisterSetting(this.TwitchKey);
             }
 
             protected override void ApplyLegacySetting(string key, object value)

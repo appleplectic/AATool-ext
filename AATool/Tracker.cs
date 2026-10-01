@@ -92,6 +92,8 @@ namespace AATool
                 : $"{seconds} seconds";
         }
 
+        public static double LastRefreshSeconds => LastRefresh;
+
         public static string GetLastRefresh(Time time)
         {
             int seconds = (int)Math.Max(time.TotalSeconds - LastRefresh, 0);

@@ -189,6 +189,7 @@ namespace AATool
             }
             
             NetRequest.Update(this.Time);
+            TwitchPublisher.Update(this.Time);
             Config.ClearAllFlags();
             Tracker.ClearFlags();
             Peer.ClearFlags();

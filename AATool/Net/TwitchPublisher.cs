@@ -46,38 +46,58 @@ namespace AATool.Net
                 Status = "Not connected";
                 return;
             }
-            if (Tracker.Category.GetType() != typeof(AllAdvancements))
-            {
-                Status = "Only All Advancements is supported";
-                return;
-            }
-            if (!Tracker.IsWorking)
-            {
-                //keep showing viewers the last good state instead of an empty tracker
-                Status = $"Paused: {Tracker.GetStatusText()}";
-                return;
-            }
 
             Dictionary<string, object> message;
-            try
+            bool hidden = Config.Net.TwitchHidden;
+            if (hidden)
             {
-                message = BuildMessage();
+                //the streamer hid the overlay (e.g. playing another game): no tracker data needed,
+                //so this goes out whatever AATool is tracking, or if it isn't tracking anything
+                message = new Dictionary<string, object> { { "v", 1 }, { "hide", true } };
             }
-            catch (Exception e)
+            else
             {
-                //never let the stream integration take down the tracker
-                Status = $"Couldn't read tracker state: {e.Message}";
-                return;
+                if (Tracker.Category.GetType() != typeof(AllAdvancements))
+                {
+                    Status = "Only All Advancements is supported";
+                    return;
+                }
+                if (!Tracker.IsWorking)
+                {
+                    //keep showing viewers the last good state instead of an empty tracker
+                    Status = $"Paused: {Tracker.GetStatusText()}";
+                    return;
+                }
+                try
+                {
+                    message = BuildMessage();
+                }
+                catch (Exception e)
+                {
+                    //never let the stream integration take down the tracker
+                    Status = $"Couldn't read tracker state: {e.Message}";
+                    return;
+                }
             }
             string content = JsonConvert.SerializeObject(message);
             if (content == lastContent && DateTime.UtcNow - lastSent < Heartbeat)
                 return;
 
             //age isn't part of the change check; viewers count it up on their own
-            message["age"] = (int)Math.Max(time.TotalSeconds - Tracker.LastRefreshSeconds, 0);
+            if (!hidden)
+                message["age"] = (int)Math.Max(time.TotalSeconds - Tracker.LastRefreshSeconds, 0);
             lastContent = content;
             lastSent = DateTime.UtcNow;
-            Send($"{server}/publish", key, JsonConvert.SerializeObject(message));
+            Send($"{server}/publish", key, JsonConvert.SerializeObject(message), hidden);
+        }
+
+        // Hide or show the overlay for every viewer; sent right away on the next update.
+        public static void SetHidden(bool hidden)
+        {
+            Config.Net.TwitchHidden.Set(hidden);
+            Config.Net.TrySave();
+            lastContent = null;
+            nextCheck = DateTime.UtcNow;
         }
 
         // Advancement files sorted by name, then document order -- matches extension/dev.mjs.
@@ -185,7 +205,7 @@ namespace AATool.Net
             return Convert.ToBase64String(bytes);
         }
 
-        private static async void Send(string url, string key, string body)
+        private static async void Send(string url, string key, string body, bool hidden)
         {
             sending = true;
             bool sent = false;
@@ -197,7 +217,7 @@ namespace AATool.Net
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
                 using HttpResponseMessage response = await Http.SendAsync(request);
                 sent = response.IsSuccessStatusCode;
-                Status = sent ? $"Connected, last update {DateTime.Now:T}"
+                Status = sent ? (hidden ? $"Overlay hidden for viewers (confirmed {DateTime.Now:T})" : $"Connected, last update {DateTime.Now:T}")
                     : response.StatusCode is HttpStatusCode.Unauthorized ? "Key not recognized, generate a new one in the extension's settings"
                     : $"Server error {(int)response.StatusCode}";
             }
@@ -242,6 +262,23 @@ namespace AATool.Net
             server.TextChanged += Save;
             key.TextChanged += Save;
 
+            //for switching games mid-stream: takes the overlay (and the on-stream count) off every viewer's screen
+            var visibility = new Label {
+                Text = "Playing something else? Hide the overlay for all viewers, then show it again when you're back.",
+                Location = new System.Drawing.Point(12, 150),
+                Size = new System.Drawing.Size(510, 18),
+            };
+            var hide = new Button { Text = "Hide overlay for everyone", Location = new System.Drawing.Point(12, 172), Size = new System.Drawing.Size(200, 26) };
+            var show = new Button { Text = "Show overlay for everyone", Location = new System.Drawing.Point(220, 172), Size = new System.Drawing.Size(200, 26) };
+            void UpdateButtons()
+            {
+                hide.Enabled = !Config.Net.TwitchHidden;
+                show.Enabled = Config.Net.TwitchHidden;
+            }
+            hide.Click += (s, e) => { SetHidden(true); UpdateButtons(); };
+            show.Click += (s, e) => { SetHidden(false); UpdateButtons(); };
+            UpdateButtons();
+
             var refresh = new System.Windows.Forms.Timer { Interval = 500, Enabled = true };
             refresh.Tick += (s, e) => status.Text = $"Status: {Status}";
             page.Disposed += (s, e) => refresh.Dispose();
@@ -253,6 +290,9 @@ namespace AATool.Net
                 new Label { Text = "Key", Location = new System.Drawing.Point(12, 85), AutoSize = true },
                 key,
                 status,
+                visibility,
+                hide,
+                show,
             });
             return page;
         }

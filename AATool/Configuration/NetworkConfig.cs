@@ -22,6 +22,7 @@ namespace AATool.Configuration
 
             [JsonProperty] public readonly Setting<string> TwitchServer = new (string.Empty);
             [JsonProperty] public readonly Setting<string> TwitchKey = new (string.Empty);
+            [JsonProperty] public readonly Setting<bool> TwitchHidden = new (false);
 
             protected override string GetId() => "network";
             protected override string GetLegacyId() => "network";
@@ -38,6 +39,7 @@ namespace AATool.Configuration
                 this.RegisterSetting(this.IsServer);
                 this.RegisterSetting(this.TwitchServer);
                 this.RegisterSetting(this.TwitchKey);
+                this.RegisterSetting(this.TwitchHidden);
             }
 
             protected override void ApplyLegacySetting(string key, object value)

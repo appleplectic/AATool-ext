@@ -139,12 +139,14 @@ namespace AATool.Net
                 }
             }
 
-            //every pinnable item for this version, so the streamer can choose which to show in the extension
-            var pickups = new Dictionary<string, string[]>();
+            //every pinnable item for this version, so the streamer can choose which to show in the extension,
+            //with its state as UIObjectiveFrame draws it: 0 not done, 1 partial (done but a follow-up is pending), 2 complete
+            var pickups = new Dictionary<string, object[]>();
             foreach (string name in PinnedObjectiveSet.GetAllAvailable())
             {
                 if (Tracker.TryGetComplexObjective(name, out ComplexObjective pickup))
-                    pickups[name] = new[] { pickup.Icon, pickup.FullStatus?.Replace('\0', ' ') };
+                    pickups[name] = new object[] { pickup.Icon, pickup.FullStatus?.Replace('\0', ' '),
+                        pickup.IsComplete() ? (pickup.Partial ? 1 : 2) : 0 };
             }
             Config.Overlay.PinnedObjectiveList.Value.TryGetCurrentList(out List<string> pinned);
 
